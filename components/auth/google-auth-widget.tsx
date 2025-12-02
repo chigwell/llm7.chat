@@ -192,6 +192,14 @@ export function GoogleAuthWidget() {
     buttonRenderedRef.current = true;
   }, [handleCredentialResponse, scriptReady, userEmail]);
 
+  // Clear any rendered Google button once we are authenticated so it doesn't linger.
+  useEffect(() => {
+    if (userEmail && buttonRef.current) {
+      buttonRef.current.innerHTML = "";
+      buttonRenderedRef.current = false;
+    }
+  }, [userEmail]);
+
   // Auto-verify any stored token on load.
   useEffect(() => {
     const token =
@@ -207,12 +215,20 @@ export function GoogleAuthWidget() {
     clearAuth();
   }, [clearAuth]);
 
+  const displayEmail = userEmail
+    ? userEmail.length > 17
+      ? `${userEmail.slice(0, 15)}...`
+      : userEmail
+    : null;
+
   return (
     <div className="rounded-lg px-3 py-3 text-sm" style={{ paddingLeft: "0px" }}>
       {userEmail ? (
         <div className="flex items-center gap-3">
           <div className="flex-1">
-            <div className="font-semibold leading-tight">{userEmail}</div>
+            <div className="font-semibold leading-tight" title={userEmail}>
+              {displayEmail}
+            </div>
             <div className="text-xs text-muted-foreground">Signed in</div>
           </div>
           <button
@@ -224,17 +240,19 @@ export function GoogleAuthWidget() {
           </button>
         </div>
       ) : (
-        <div className="flex flex-col items-start gap-2">
-          <div
-            ref={buttonRef}
-            className="flex w-full justify-start"
-            aria-live="polite"
-          />
-          {isLoading && (
-            <div className="text-xs text-muted-foreground">Checking login…</div>
-          )}
-          {error && <div className="text-xs text-destructive">{error}</div>}
-        </div>
+        <div className="text-xs text-muted-foreground">Sign in with Google to use LLM7.chat</div>
+      )}
+
+      <div
+        ref={buttonRef}
+        className={`mt-2 flex w-full justify-start ${userEmail ? "hidden" : ""}`}
+        aria-live="polite"
+      />
+      {!userEmail && isLoading && (
+        <div className="text-xs text-muted-foreground">Checking login…</div>
+      )}
+      {!userEmail && error && (
+        <div className="text-xs text-destructive">{error}</div>
       )}
     </div>
   );
