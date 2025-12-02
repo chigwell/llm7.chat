@@ -21,33 +21,16 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { API_TOKEN_KEY } from "@/lib/auth";
-
-const getApiToken = () => {
-  try {
-    if (typeof localStorage !== "undefined") {
-      const fromStorage = localStorage.getItem(API_TOKEN_KEY);
-      if (fromStorage) return fromStorage;
-    }
-  } catch {
-    // ignore
-  }
-  if (typeof document !== "undefined") {
-    const target = `${encodeURIComponent(API_TOKEN_KEY)}=`;
-    const found = document.cookie
-      .split("; ")
-      .find((p) => p.startsWith(target));
-    if (found) return decodeURIComponent(found.slice(target.length));
-  }
-  return null;
-};
+import { API_TOKEN_KEY, getStoredToken } from "@/lib/auth";
+import { useAssistantApi, useAssistantState } from "@assistant-ui/react";
+import { useEffect, useRef } from "react";
 
 export const Assistant = () => {
   const runtime = useChatRuntime({
     transport: new AssistantChatTransport({
       api: "/api/chat",
       headers: async () => {
-        const token = getApiToken();
+        const token = getStoredToken(API_TOKEN_KEY);
         return token ? { Authorization: `Bearer ${token}` } : {};
       },
     }),
@@ -59,33 +42,126 @@ export const Assistant = () => {
         <div className="flex h-dvh w-full pr-0.5">
           <ThreadListSidebar />
           <SidebarInset>
-            <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
-              <SidebarTrigger />
-              <Separator orientation="vertical" className="mr-2 h-4" />
-              <Breadcrumb>
-                <BreadcrumbList>
-                  {/*<BreadcrumbItem className="hidden md:block">
-                    <BreadcrumbLink
-                      href="https://www.assistant-ui.com/docs/getting-started"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Build Your Own ChatGPT UX
-                    </BreadcrumbLink>
-                  </BreadcrumbItem>
-                  <BreadcrumbSeparator className="hidden md:block" />*/}
-                  <BreadcrumbItem>
-                    <BreadcrumbPage>New chat</BreadcrumbPage>
-                  </BreadcrumbItem>
-                </BreadcrumbList>
-              </Breadcrumb>
-            </header>
+            <AssistantHeader />
             <div className="flex-1 overflow-hidden">
               <Thread />
+              <ChatTitleManager />
             </div>
           </SidebarInset>
         </div>
       </SidebarProvider>
     </AssistantRuntimeProvider>
   );
+};
+
+const AssistantHeader = () => {
+  const threadTitle =
+    useAssistantState(({ threads }) => {
+      const mainId = threads.mainThreadId;
+      return threads.threadItems.find((t) => t.id === mainId)?.title;
+    }) ?? "";
+
+  const headerTitle =
+    threadTitle.trim().length === 0
+      ? "New chat"
+      : threadTitle.length > 30
+        ? `${threadTitle.slice(0, 28)}...`
+        : threadTitle;
+
+  return (
+    <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
+      <SidebarTrigger />
+      <Separator orientation="vertical" className="mr-2 h-4" />
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbPage>{headerTitle}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+    </header>
+  );
+};
+
+const ChatTitleManager = () => {
+  const api = useAssistantApi();
+  const mainThreadId = useAssistantState(
+    ({ threads }) => threads.mainThreadId,
+  );
+  const currentTitle =
+    useAssistantState(({ threads }) => {
+      const title =
+        threads.threadItems.find((t) => t.id === threads.mainThreadId)?.title;
+      return title ?? "";
+    }) ?? "";
+  const firstUserMessage = useAssistantState(({ thread }) =>
+    thread.messages.find((m) => m.role === "user"),
+  );
+
+  const attempted = useRef(new Set<string>());
+
+  useEffect(() => {
+    const threadId = mainThreadId;
+    if (!threadId) return;
+    if (attempted.current.has(threadId)) return;
+
+    const parts = (firstUserMessage?.content ?? []) as Array<{
+      type?: string;
+      text?: string;
+    }>;
+    const userText = parts
+      .filter((p) => p.type === "text" && typeof p.text === "string")
+      .map((p) => p.text as string)
+      .join(" ")
+      .trim();
+
+    if (!userText) return;
+    if (currentTitle && currentTitle.trim().length > 0) {
+      attempted.current.add(threadId);
+      return;
+    }
+
+    const apiToken = getStoredToken(API_TOKEN_KEY);
+    if (!apiToken) return;
+
+    const itemApi = api.threads().item({ id: threadId });
+
+    const run = async () => {
+      try {
+        // Ensure the thread is initialized so rename succeeds.
+        const state = itemApi.getState();
+        if (state.status === "new") {
+          await itemApi.initialize();
+        }
+        const response = await fetch(
+          `https://api.llm7.io/get-chat-name?user_input=${encodeURIComponent(
+            userText,
+          )}`,
+          {
+            headers: {
+              Authorization: `Bearer ${apiToken}`,
+            },
+          },
+        );
+
+        if (!response.ok) return;
+        const data = (await response.json()) as { chat_name?: string };
+        const chatName = typeof data.chat_name === "string"
+          ? data.chat_name.trim()
+          : "";
+        if (!chatName) return;
+
+        await itemApi.rename(chatName);
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error("Failed to generate chat name", err);
+      } finally {
+        attempted.current.add(threadId);
+      }
+    };
+
+    run();
+  }, [api, currentTitle, firstUserMessage, mainThreadId]);
+
+  return null;
 };

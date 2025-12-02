@@ -73,9 +73,18 @@ const ThreadListItem: FC = () => {
 };
 
 const ThreadListItemTitle: FC = () => {
+  const title =
+    useAssistantState(({ threadListItem }) => threadListItem.title) ?? "";
+  const display =
+    title.length === 0
+      ? "New Chat"
+      : title.length > 17
+        ? `${title.slice(0, 15)}...`
+        : title;
+
   return (
     <span className="aui-thread-list-item-title text-sm">
-      <ThreadListItemPrimitive.Title fallback="New Chat" />
+      {display}
     </span>
   );
 };
