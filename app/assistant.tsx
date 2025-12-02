@@ -48,9 +48,11 @@ export const Assistant = () => {
   const transport = useMemo(
     () =>
       new BrowserChatTransport({
-        getHeaders: async () => {
+        getHeaders: async (): Promise<Record<string, string>> => {
+          const headers: Record<string, string> = {};
           const token = getStoredToken(API_TOKEN_KEY);
-          return token ? { Authorization: `Bearer ${token}` } : {};
+          if (token) headers.Authorization = `Bearer ${token}`;
+          return headers;
         },
         onError: (info) => setTransportError(info),
       }),
