@@ -1,10 +1,7 @@
 "use client";
 
 import { AssistantRuntimeProvider } from "@assistant-ui/react";
-import {
-  useChatRuntime,
-  AssistantChatTransport,
-} from "@assistant-ui/react-ai-sdk";
+import { useChatRuntime } from "@assistant-ui/react-ai-sdk";
 import { Thread } from "@/components/assistant-ui/thread";
 import {
   SidebarInset,
@@ -16,14 +13,16 @@ import { Separator } from "@/components/ui/separator";
 import {
   Breadcrumb,
   BreadcrumbItem,
-  BreadcrumbLink,
   BreadcrumbList,
   BreadcrumbPage,
-  BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { API_TOKEN_KEY, getStoredToken } from "@/lib/auth";
 import { useAssistantApi, useAssistantState } from "@assistant-ui/react";
-import { useEffect, useRef, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import {
+  BrowserChatTransport,
+  type TransportErrorInfo,
+} from "@/lib/browser-chat-transport";
 
 const CHAT_NAME_URL = "http://0.0.0.0:8000/get-chat-name";
 
@@ -43,15 +42,30 @@ const useStoredToken = (key: string) =>
   );
 
 export const Assistant = () => {
+  const [transportError, setTransportError] = useState<TransportErrorInfo | null>(null);
+  const apiToken = useStoredToken(API_TOKEN_KEY);
+
+  const transport = useMemo(
+    () =>
+      new BrowserChatTransport({
+        getHeaders: async () => {
+          const token = getStoredToken(API_TOKEN_KEY);
+          return token ? { Authorization: `Bearer ${token}` } : {};
+        },
+        onError: (info) => setTransportError(info),
+      }),
+    [],
+  );
+
   const runtime = useChatRuntime({
-    transport: new AssistantChatTransport({
-      api: "/api/chat",
-      headers: async () => {
-        const token = getStoredToken(API_TOKEN_KEY);
-        return token ? { Authorization: `Bearer ${token}` } : {};
-      },
-    }),
+    transport,
   });
+
+  useEffect(() => {
+    if (transportError && !transportError.authed && apiToken) {
+      setTransportError(null);
+    }
+  }, [apiToken, transportError]);
 
   return (
     <AssistantRuntimeProvider runtime={runtime}>
@@ -61,7 +75,10 @@ export const Assistant = () => {
           <SidebarInset>
             <AssistantHeader />
             <div className="flex-1 overflow-hidden">
-              <Thread />
+              <Thread
+                transportError={transportError}
+                onClearTransportError={() => setTransportError(null)}
+              />
               <ChatTitleManager />
             </div>
           </SidebarInset>

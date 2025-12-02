@@ -1,3 +1,5 @@
+"use client";
+
 import {
   ArrowDownIcon,
   ArrowUpIcon,
@@ -35,8 +37,15 @@ import {
 } from "@/components/assistant-ui/attachment";
 
 import { cn } from "@/lib/utils";
+import { GoogleAuthWidget } from "@/components/auth/google-auth-widget";
+import { type TransportErrorInfo } from "@/lib/browser-chat-transport";
 
-export const Thread: FC = () => {
+type ThreadProps = {
+  transportError?: TransportErrorInfo | null;
+  onClearTransportError?: () => void;
+};
+
+export const Thread: FC<ThreadProps> = ({ transportError, onClearTransportError }) => {
   return (
     <LazyMotion features={domAnimation}>
       <MotionConfig reducedMotion="user">
@@ -63,12 +72,143 @@ export const Thread: FC = () => {
               <div className="aui-thread-viewport-spacer min-h-8 grow" />
             </ThreadPrimitive.If>
 
+            {transportError ? (
+              <TransportErrorCard
+                error={transportError}
+                onDismiss={onClearTransportError}
+              />
+            ) : null}
+
             <Composer />
           </ThreadPrimitive.Viewport>
         </ThreadPrimitive.Root>
       </MotionConfig>
     </LazyMotion>
   );
+};
+
+type ErrorAction =
+  | { kind: "auth"; heading: string; body: string }
+  | { kind: "subscribe"; heading: string; body: string; label: string }
+  | { kind: "limit"; heading: string; body: string };
+
+const SUBSCRIPTION_URL = "https://token.llm7.io/?subscription=show";
+
+const TransportErrorCard: FC<{
+  error: TransportErrorInfo;
+  onDismiss?: () => void;
+}> = ({ error, onDismiss }) => {
+  const action = pickErrorAction(error);
+
+  return (
+    <div className="aui-transport-error mx-auto mb-4 mt-4 w-full max-w-[var(--thread-max-width)] rounded-xl border border-destructive/40 bg-destructive/5 p-4 text-sm shadow-sm dark:bg-destructive/10">
+      <div className="flex flex-col gap-3">
+        <div className="flex items-start gap-3">
+          <div className="flex-1">
+            <div className="font-semibold text-destructive">
+              {action.heading}
+            </div>
+            <div className="mt-1 text-muted-foreground">{action.body}</div>
+          </div>
+          {onDismiss ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={onDismiss}
+              className="shrink-0 text-destructive hover:bg-destructive/10"
+            >
+              Dismiss
+            </Button>
+          ) : null}
+        </div>
+
+        {action.kind === "auth" ? (
+          <div className="rounded-lg border bg-background p-3">
+            <div className="text-xs text-muted-foreground">
+              Sign in to raise your limits.
+            </div>
+            <div className="mt-2">
+              <GoogleAuthWidget />
+            </div>
+          </div>
+        ) : null}
+
+        {action.kind === "subscribe" ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <Button asChild size="sm" variant="default">
+              <a
+                href={SUBSCRIPTION_URL}
+                target="_blank"
+                rel="noreferrer"
+                className="font-medium"
+              >
+                {action.label}
+              </a>
+            </Button>
+            <span className="text-xs text-muted-foreground">
+              Opens in a new tab.
+            </span>
+          </div>
+        ) : null}
+
+        <div className="text-[11px] text-muted-foreground">
+          Error {error.status} {error.statusText || ""} • {error.message} •{" "}
+          <a
+            href="https://docs.llm7.io/limits"
+            target="_blank"
+            rel="noreferrer"
+            className="underline"
+          >
+            View limits
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const pickErrorAction = (error: TransportErrorInfo): ErrorAction => {
+  if (!error.authed) {
+    const base = error.status === 429
+      ? "Anonymous requests have a strict rate limit."
+      : "You need to sign in to continue.";
+    return {
+      kind: "auth",
+      heading: "Sign in with Google to keep chatting",
+      body: base,
+    };
+  }
+
+  switch (error.sub) {
+    case 0:
+    case 1:
+      return {
+        kind: "subscribe",
+        heading: "Upgrade to Vibe or Pro for higher limits",
+        body: "Your current plan hit its limit. Upgrade to unlock more requests.",
+        label: "View subscriptions",
+      };
+    case 2:
+      return {
+        kind: "subscribe",
+        heading: "You’re on Vibe — upgrade to Pro for more",
+        body: "Pro increases your chat generation limits.",
+        label: "Upgrade to Pro",
+      };
+    case 3:
+      return {
+        kind: "limit",
+        heading: "Pro limit reached",
+        body: "You’ve hit the Pro plan cap. Try again shortly.",
+      };
+    default:
+      return {
+        kind: "auth",
+        heading: "Check your account",
+        body: "We couldn’t verify your plan. Please sign in again.",
+      };
+  }
 };
 
 const ThreadScrollToBottom: FC = () => {
