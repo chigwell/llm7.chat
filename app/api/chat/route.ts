@@ -9,13 +9,7 @@ export async function POST(req: Request) {
   const { messages }: { messages: UIMessage[] } = await req.json();
 
   const authHeader = req.headers.get("authorization") ?? "";
-  const token = authHeader.replace(/^Bearer\s+/i, "").trim();
-  if (!token) {
-    return new Response(
-      JSON.stringify({ error: "Missing auth token" }),
-      { status: 401, headers: { "Content-Type": "application/json" } },
-    );
-  }
+  const token = authHeader.replace(/^Bearer\s+/i, "").trim() || "none";
 
   const llm7 = createOpenAI({
     baseURL: "https://api.llm7.io/v1",
