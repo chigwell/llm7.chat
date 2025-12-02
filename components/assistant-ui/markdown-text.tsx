@@ -9,7 +9,7 @@ import {
   useIsMarkdownCodeBlock,
 } from "@assistant-ui/react-markdown";
 import remarkGfm from "remark-gfm";
-import { type FC, memo, useState } from "react";
+import { type FC, memo, useEffect, useState } from "react";
 import { CheckIcon, CopyIcon } from "lucide-react";
 
 import { TooltipIconButton } from "@/components/assistant-ui/tooltip-icon-button";
@@ -170,11 +170,31 @@ const defaultComponents = memoizeMarkdownComponents({
     />
   ),
   img: ({ className, src, alt, ...props }) => {
+    const [objectUrl, setObjectUrl] = useState<string | null>(null);
+
+    useEffect(() => {
+      if (!src || typeof src === "string") {
+        setObjectUrl(null);
+        return;
+      }
+
+      const url = URL.createObjectURL(src);
+      setObjectUrl(url);
+
+      return () => {
+        URL.revokeObjectURL(url);
+      };
+    }, [src]);
+
     if (!src) return null;
+
+    const resolvedSrc = typeof src === "string" ? src : objectUrl;
+    if (!resolvedSrc) return null;
+
     const figure = (
       // eslint-disable-next-line @next/next/no-img-element
       <img
-        src={src}
+        src={resolvedSrc}
         alt={alt ?? ""}
         loading="lazy"
         className={cn("aui-md-img my-4 max-h-[480px] w-auto cursor-pointer rounded-lg border", className)}
@@ -182,10 +202,11 @@ const defaultComponents = memoizeMarkdownComponents({
       />
     );
 
-    const isHttp = src.startsWith("http://") || src.startsWith("https://");
+    const isHttp =
+      resolvedSrc.startsWith("http://") || resolvedSrc.startsWith("https://");
     if (isHttp) {
       return (
-        <a href={src} target="_blank" rel="noreferrer">
+        <a href={resolvedSrc} target="_blank" rel="noreferrer">
           {figure}
         </a>
       );
