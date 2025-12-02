@@ -177,7 +177,7 @@ const Composer: FC = () => {
       <ThreadScrollToBottom />
       <ComposerPrimitive.Root className="aui-composer-root relative flex w-full flex-col">
         <ComposerPrimitive.AttachmentDropzone className="aui-composer-attachment-dropzone group/input-group flex w-full flex-col rounded-3xl border border-input bg-background px-1 pt-2 shadow-xs transition-[color,box-shadow] outline-none has-[textarea:focus-visible]:border-ring has-[textarea:focus-visible]:ring-[3px] has-[textarea:focus-visible]:ring-ring/50 data-[dragging=true]:border-dashed data-[dragging=true]:border-ring data-[dragging=true]:bg-accent/50 dark:bg-background">
-          <ComposerAttachments />
+          {/*<ComposerAttachments />*/}
           <ComposerPrimitive.Input
             placeholder="Send a message..."
             className="aui-composer-input mb-1 max-h-32 min-h-16 w-full resize-none bg-transparent px-3.5 pt-1.5 pb-3 text-base outline-none placeholder:text-muted-foreground focus-visible:ring-0"
@@ -194,10 +194,13 @@ const Composer: FC = () => {
 
 const ComposerAction: FC = () => {
   return (
-    <div className="aui-composer-action-wrapper relative mx-1 mt-2 mb-2 flex items-center justify-between">
-      <ComposerAddAttachment />
+    <div
+      className="aui-composer-action-wrapper relative mx-1 mt-2 mb-2 flex items-center gap-2"
+      style={{ justifyContent: "flex-end" }}
+    >
+      {/*<ComposerAddAttachment />*/}
 
-      <ThreadPrimitive.If running={false}>
+      <ThreadPrimitive.If running={false} style={{ display: "flex" }}>
         <ComposerPrimitive.Send asChild>
           <TooltipIconButton
             tooltip="Send message"
