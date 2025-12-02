@@ -340,20 +340,22 @@ const ComposerAction: FC = () => {
     >
       {/*<ComposerAddAttachment />*/}
 
-      <ThreadPrimitive.If running={false} style={{ display: "flex" }}>
-        <ComposerPrimitive.Send asChild>
-          <TooltipIconButton
-            tooltip="Send message"
-            side="bottom"
-            type="submit"
-            variant="default"
-            size="icon"
-            className="aui-composer-send size-[34px] rounded-full p-1"
-            aria-label="Send message"
-          >
-            <ArrowUpIcon className="aui-composer-send-icon size-5" />
-          </TooltipIconButton>
-        </ComposerPrimitive.Send>
+      <ThreadPrimitive.If running={false}>
+        <div style={{ display: "flex" }}>
+          <ComposerPrimitive.Send asChild>
+            <TooltipIconButton
+              tooltip="Send message"
+              side="bottom"
+              type="submit"
+              variant="default"
+              size="icon"
+              className="aui-composer-send size-[34px] rounded-full p-1"
+              aria-label="Send message"
+            >
+              <ArrowUpIcon className="aui-composer-send-icon size-5" />
+            </TooltipIconButton>
+          </ComposerPrimitive.Send>
+        </div>
       </ThreadPrimitive.If>
 
       <ThreadPrimitive.If running>
