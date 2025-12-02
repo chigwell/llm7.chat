@@ -23,7 +23,24 @@ import {
 } from "@/components/ui/breadcrumb";
 import { API_TOKEN_KEY, getStoredToken } from "@/lib/auth";
 import { useAssistantApi, useAssistantState } from "@assistant-ui/react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
+
+const CHAT_NAME_URL = "http://0.0.0.0:8000/get-chat-name";
+
+const useStoredToken = (key: string) =>
+  useSyncExternalStore(
+    (onChange) => {
+      const handler = () => onChange();
+      window.addEventListener("storage", handler);
+      const id = setInterval(handler, 1000);
+      return () => {
+        window.removeEventListener("storage", handler);
+        clearInterval(id);
+      };
+    },
+    () => getStoredToken(key),
+    () => getStoredToken(key),
+  );
 
 export const Assistant = () => {
   const runtime = useChatRuntime({
@@ -85,6 +102,7 @@ const AssistantHeader = () => {
 
 const ChatTitleManager = () => {
   const api = useAssistantApi();
+  const apiToken = useStoredToken(API_TOKEN_KEY) || "none";
   const mainThreadId = useAssistantState(
     ({ threads }) => threads.mainThreadId,
   );
@@ -121,10 +139,10 @@ const ChatTitleManager = () => {
       return;
     }
 
-    const apiToken = getStoredToken(API_TOKEN_KEY);
     if (!apiToken) return;
 
     const itemApi = api.threads().item({ id: threadId });
+    attempted.current.add(threadId);
 
     const run = async () => {
       try {
@@ -134,9 +152,7 @@ const ChatTitleManager = () => {
           await itemApi.initialize();
         }
         const response = await fetch(
-          `https://api.llm7.io/get-chat-name?user_input=${encodeURIComponent(
-            userText,
-          )}`,
+          `${CHAT_NAME_URL}?user_input=${encodeURIComponent(userText)}`,
           {
             headers: {
               Authorization: `Bearer ${apiToken}`,
@@ -155,13 +171,11 @@ const ChatTitleManager = () => {
       } catch (err) {
         // eslint-disable-next-line no-console
         console.error("Failed to generate chat name", err);
-      } finally {
-        attempted.current.add(threadId);
       }
     };
 
     run();
-  }, [api, currentTitle, firstUserMessage, mainThreadId]);
+  }, [api, apiToken, currentTitle, firstUserMessage, mainThreadId]);
 
   return null;
 };
