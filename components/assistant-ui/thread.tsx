@@ -259,9 +259,9 @@ const ThreadSuggestions: FC = () => {
     <div className="aui-thread-welcome-suggestions grid w-full gap-2 pb-4 @md:grid-cols-2">
       {[
         {
-          title: "What's the weather",
-          label: "in San Francisco?",
-          action: "What's the weather in San Francisco?",
+          title: "What do you know",
+          label: "about LLMs?",
+          action: "What do you know about LLMs?",
         },
         {
           title: "Explain React hooks",
