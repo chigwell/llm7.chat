@@ -24,7 +24,7 @@ import {
   type TransportErrorInfo,
 } from "@/lib/browser-chat-transport";
 
-const CHAT_NAME_URL = "http://0.0.0.0:8000/get-chat-name";
+const CHAT_NAME_URL = "https://api.llm7.io/get-chat-name";
 
 const useStoredToken = (key: string) =>
   useSyncExternalStore(
