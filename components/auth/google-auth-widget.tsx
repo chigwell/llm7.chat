@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { API_TOKEN_KEY, ID_TOKEN_KEY } from "@/lib/auth";
+
 const GA_CLIENT_ID =
   "264062651955-8qamru5vjtu9kc1tk2trsgte5e10hm0m.apps.googleusercontent.com";
 const BASE_API_URL = "https://llm7-api.chigwel137.workers.dev";
-const ID_TOKEN_KEY = "id_token";
+const API_TOKEN_FALLBACK_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
 
 type VerifyResponse = { email?: string; sub?: string };
 type GsiCredentialResponse = { credential?: string };
@@ -93,7 +95,7 @@ export function GoogleAuthWidget() {
   const buttonRenderedRef = useRef(false);
   const verifyingRef = useRef(false);
 
-  const persistToken = useCallback((token: string) => {
+  const persistIdToken = useCallback((token: string) => {
     const maxAge = jwtMaxAgeSeconds(token);
     try {
       localStorage.setItem(ID_TOKEN_KEY, token);
@@ -103,19 +105,69 @@ export function GoogleAuthWidget() {
     setCookie(ID_TOKEN_KEY, token, maxAge);
   }, []);
 
+  const persistApiToken = useCallback(
+    (token: string, expiresAt?: string | null) => {
+      const maxAge =
+        expiresAt != null
+          ? Math.max(
+              0,
+              Math.floor(
+                (new Date(expiresAt).getTime() - Date.now()) / 1000,
+              ),
+            )
+          : API_TOKEN_FALLBACK_MAX_AGE_SECONDS;
+      try {
+        localStorage.setItem(API_TOKEN_KEY, token);
+      } catch {
+        // Ignore storage failures.
+      }
+      setCookie(API_TOKEN_KEY, token, maxAge);
+    },
+    [],
+  );
+
   const clearAuth = useCallback(() => {
     try {
       localStorage.removeItem(ID_TOKEN_KEY);
     } catch {
       // Ignore storage failures.
     }
+    try {
+      localStorage.removeItem(API_TOKEN_KEY);
+    } catch {
+      // Ignore storage failures.
+    }
     deleteCookie(ID_TOKEN_KEY);
+    deleteCookie(API_TOKEN_KEY);
     setUserEmail(null);
     buttonRenderedRef.current = false;
     if (buttonRef.current) {
       buttonRef.current.innerHTML = "";
     }
   }, []);
+
+  const fetchApiToken = useCallback(
+    async (idToken: string) => {
+      const res = await fetch(`${BASE_API_URL}/tokens/most-capable`, {
+        headers: { Authorization: `Bearer ${idToken}` },
+      });
+      if (!res.ok) {
+        throw new Error(
+          `Failed to fetch API token (${res.status})`,
+        );
+      }
+      const data = (await res.json()) as {
+        token?: string;
+        sub?: number;
+        expires_at?: string | null;
+      };
+      if (!data?.token) {
+        throw new Error("No API token returned");
+      }
+      persistApiToken(data.token, data.expires_at);
+    },
+    [persistApiToken],
+  );
 
   const verifyToken = useCallback(async (token: string) => {
     if (verifyingRef.current) return;
@@ -135,7 +187,8 @@ export function GoogleAuthWidget() {
         throw new Error("Email missing from verify response");
       }
       setUserEmail(data.email);
-      persistToken(token);
+      persistIdToken(token);
+      await fetchApiToken(token);
     } catch (err) {
       clearAuth();
       setError("Could not verify Google sign-in. Please try again.");
@@ -145,7 +198,7 @@ export function GoogleAuthWidget() {
       verifyingRef.current = false;
       setIsLoading(false);
     }
-  }, [clearAuth, persistToken]);
+  }, [clearAuth, persistIdToken]);
 
   const handleCredentialResponse = useCallback(
     async (response: GsiCredentialResponse) => {
@@ -202,12 +255,12 @@ export function GoogleAuthWidget() {
 
   // Auto-verify any stored token on load.
   useEffect(() => {
-    const token =
+    const idToken =
       (typeof localStorage !== "undefined" &&
         localStorage.getItem(ID_TOKEN_KEY)) ||
       (typeof document !== "undefined" && getCookie(ID_TOKEN_KEY));
-    if (token) {
-      verifyToken(token);
+    if (idToken) {
+      verifyToken(idToken);
     }
   }, [verifyToken]);
 

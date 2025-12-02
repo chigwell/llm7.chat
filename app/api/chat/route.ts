@@ -5,12 +5,22 @@ import {
   type UIMessage,
 } from "ai";
 
-const llm7 = createOpenAI({
-  baseURL: "https://api.llm7.io/v1",
-});
-
 export async function POST(req: Request) {
   const { messages }: { messages: UIMessage[] } = await req.json();
+
+  const authHeader = req.headers.get("authorization") ?? "";
+  const token = authHeader.replace(/^Bearer\s+/i, "").trim();
+  if (!token) {
+    return new Response(
+      JSON.stringify({ error: "Missing auth token" }),
+      { status: 401, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
+  const llm7 = createOpenAI({
+    baseURL: "https://api.llm7.io/v1",
+    apiKey: token,
+  });
 
   const result = streamText({
     model: llm7.chat("gpt-5-nano"),

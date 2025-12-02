@@ -21,11 +21,35 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import { API_TOKEN_KEY } from "@/lib/auth";
+
+const getApiToken = () => {
+  try {
+    if (typeof localStorage !== "undefined") {
+      const fromStorage = localStorage.getItem(API_TOKEN_KEY);
+      if (fromStorage) return fromStorage;
+    }
+  } catch {
+    // ignore
+  }
+  if (typeof document !== "undefined") {
+    const target = `${encodeURIComponent(API_TOKEN_KEY)}=`;
+    const found = document.cookie
+      .split("; ")
+      .find((p) => p.startsWith(target));
+    if (found) return decodeURIComponent(found.slice(target.length));
+  }
+  return null;
+};
 
 export const Assistant = () => {
   const runtime = useChatRuntime({
     transport: new AssistantChatTransport({
       api: "/api/chat",
+      headers: async () => {
+        const token = getApiToken();
+        return token ? { Authorization: `Bearer ${token}` } : {};
+      },
     }),
   });
 
