@@ -169,6 +169,30 @@ const defaultComponents = memoizeMarkdownComponents({
       {...props}
     />
   ),
+  img: ({ className, src, alt, ...props }) => {
+    if (!src) return null;
+    const figure = (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={src}
+        alt={alt ?? ""}
+        loading="lazy"
+        className={cn("aui-md-img my-4 max-h-[480px] w-auto cursor-pointer rounded-lg border", className)}
+        {...props}
+      />
+    );
+
+    const isHttp = src.startsWith("http://") || src.startsWith("https://");
+    if (isHttp) {
+      return (
+        <a href={src} target="_blank" rel="noreferrer">
+          {figure}
+        </a>
+      );
+    }
+
+    return figure;
+  },
   th: ({ className, ...props }) => (
     <th
       className={cn(
