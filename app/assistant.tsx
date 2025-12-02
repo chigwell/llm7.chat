@@ -38,9 +38,9 @@ export const Assistant = () => {
             <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
               <SidebarTrigger />
               <Separator orientation="vertical" className="mr-2 h-4" />
-              {/*<Breadcrumb>
+              <Breadcrumb>
                 <BreadcrumbList>
-                  <BreadcrumbItem className="hidden md:block">
+                  {/*<BreadcrumbItem className="hidden md:block">
                     <BreadcrumbLink
                       href="https://www.assistant-ui.com/docs/getting-started"
                       target="_blank"
@@ -49,12 +49,12 @@ export const Assistant = () => {
                       Build Your Own ChatGPT UX
                     </BreadcrumbLink>
                   </BreadcrumbItem>
-                  <BreadcrumbSeparator className="hidden md:block" />
+                  <BreadcrumbSeparator className="hidden md:block" />*/}
                   <BreadcrumbItem>
-                    <BreadcrumbPage>Starter Template</BreadcrumbPage>
+                    <BreadcrumbPage>New chat</BreadcrumbPage>
                   </BreadcrumbItem>
                 </BreadcrumbList>
-              </Breadcrumb>*/}
+              </Breadcrumb>
             </header>
             <div className="flex-1 overflow-hidden">
               <Thread />
