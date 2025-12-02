@@ -18,6 +18,12 @@ yarn dev
 pnpm dev
 # or
 bun dev
+
+
+
+
+npx wrangler pages deploy out --project-name llm7-chat
+
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
