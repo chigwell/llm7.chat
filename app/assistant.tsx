@@ -115,6 +115,14 @@ const AssistantHeader = () => {
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
+      <div className="flex-1" />
+      <a
+        href="https://docs.llm7.io/quickstart"
+        target="_blank"
+        className="mr-4"
+      >
+        API Docs
+      </a>
     </header>
   );
 };
