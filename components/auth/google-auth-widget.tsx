@@ -243,7 +243,7 @@ export function GoogleAuthWidget() {
       shape: "pill",
     });
     buttonRenderedRef.current = true;
-  }, [handleCredentialResponse, scriptReady, userEmail]);
+  }, [error, handleCredentialResponse, scriptReady, userEmail]);
 
   // Clear any rendered Google button once we are authenticated so it doesn't linger.
   useEffect(() => {
