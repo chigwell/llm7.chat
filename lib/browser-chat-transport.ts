@@ -38,7 +38,7 @@ export type TransportErrorInfo = {
 const DEFAULT_BASE_URL = "https://api.llm7.io/v1";
 const DEFAULT_MODEL = "gpt-5-nano";
 const TEXT_STREAM_ID = "text-1";
-const VERIFY_URL = "https://llm7-api.chigwel137.workers.dev/verify";
+const VERIFY_URL = "https://api-token.llm7.io/verify";
 const DETECT_IMAGE_GEN_PATH = "/is-image-gen-request";
 
 /**

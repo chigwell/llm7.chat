@@ -6,7 +6,7 @@ import { API_TOKEN_KEY, ID_TOKEN_KEY } from "@/lib/auth";
 
 const GA_CLIENT_ID =
   "264062651955-8qamru5vjtu9kc1tk2trsgte5e10hm0m.apps.googleusercontent.com";
-const BASE_API_URL = "https://llm7-api.chigwel137.workers.dev";
+const BASE_API_URL = "https://api-token.llm7.io";
 const API_TOKEN_FALLBACK_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
 
 type VerifyResponse = { email?: string; sub?: string };
